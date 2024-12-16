@@ -1,0 +1,10 @@
+* {
+  text-align: right;
+  font-family: 'Assistant';
+  dir: rtl;
+}
+
+.bslib-page-title {
+  font-weight: bold;
+  text-align: center;
+}
