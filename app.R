@@ -121,9 +121,10 @@ server <- function(input, output) {
     req(df_question())
     df_question() |> 
       mutate(
-        .by = c(city),
+        .by = city,
         mean_value = mean(value)
       ) |> 
+      mutate(city = fct_reorder(city, value, .fun = mean)) |>
       ggplot(aes(value, city, fill = mean_value)) + 
       geom_density_ridges(
         quantile_lines = TRUE, quantile_fun = mean
@@ -131,7 +132,7 @@ server <- function(input, output) {
       scale_fill_brewer(type = "div") +
       scale_fill_gradient(low = "red", high = "blue") +
       labs(
-        title = "התפלגות וממוצע מדד לפי עיר",
+        title = paste0("התפלגות וממוצע מדד לפי עיר", "\n", input$question),
         x = "ערך מדד",
         y = "",
       )
@@ -145,13 +146,14 @@ server <- function(input, output) {
         .by = question,
         mean_value = mean(value)
       ) |> 
+      mutate(question = fct_reorder(question, value, .fun = mean)) |>
       ggplot(aes(value, question, fill = mean_value)) + 
       geom_density_ridges(
         quantile_lines = TRUE, quantile_fun = mean
       ) + 
       scale_fill_gradient(low = "red", high = "blue", breaks = 1:5) +
       labs(
-        title = "התפלגות וממוצע מדד לפי שאלה",
+        title = paste("התפלגות וממוצע מדד לפי שאלה,", input$city),
         x = "ערך מדד",
         y = "",
       )
