@@ -2,6 +2,7 @@ library(shiny)
 library(googlesheets4)
 library(dplyr)
 library(ggplot2)
+library(scales)
 library(tidyr)
 library(stringr)
 library(forcats)
@@ -32,7 +33,7 @@ ui <- page(
       layout_sidebar(
         sidebar = sidebar(
           open = TRUE,
-          "בחרו תחום",
+          h5("בחרו תחום"),
           radioButtons(
             "question",
             label = "",
@@ -56,7 +57,7 @@ ui <- page(
       layout_sidebar(
         sidebar = sidebar(
           open = TRUE,
-          "בחרו עיר",
+          h5("בחרו עיר"),
           radioButtons(
             "city",
             label = "",
@@ -72,6 +73,17 @@ ui <- page(
           )
         ),
         plotOutput("plot_by_city")
+      )
+    ),
+    nav_item(
+      radioButtons(
+        "plot_switch",
+        label = "",
+        inline = TRUE,
+        choices = c(
+          "תרשים יפה",
+          "תרשים נכון"
+        )
       )
     )
   )
@@ -117,6 +129,54 @@ server <- function(input, output) {
     }
   })
   
+  plot_geoms_question <- reactive({
+    if (input$plot_switch == "תרשים יפה")
+    {
+          geom_density_ridges(
+            aes(y = city),
+            quantile_lines = TRUE, quantile_fun = mean
+          )
+    }
+    else {
+      list(
+        geom_histogram(
+          bins = 5,
+          color = "black"
+        ),
+          geom_vline(aes(xintercept = mean_value), linewidth = 2),
+          facet_grid(rows = vars(city), switch = "y", as.table = FALSE),
+          scale_y_continuous(
+            position = "right",
+            minor_breaks = NULL
+          )
+      )
+    }
+  })
+  
+  plot_geoms_city <- reactive({
+    if (input$plot_switch == "תרשים יפה")
+    {
+      geom_density_ridges(
+        aes(y = question),
+        quantile_lines = TRUE, quantile_fun = mean
+      )
+    }
+    else {
+      list(
+        geom_histogram(
+          bins = 5,
+          color = "black"
+        ),
+        geom_vline(aes(xintercept = mean_value), linewidth = 2),
+        facet_grid(rows = vars(question), switch = "y", as.table = FALSE),
+        scale_y_discrete(
+          position = "right"
+        ),
+        theme(strip.text.y.left = element_text(angle = 0))
+      )
+    }
+  })
+  
   output$plot_by_question <- renderPlot({
     req(df_question())
     df_question() |> 
@@ -125,11 +185,9 @@ server <- function(input, output) {
         mean_value = mean(value)
       ) |> 
       mutate(city = fct_reorder(city, value, .fun = mean)) |>
-      ggplot(aes(value, city, fill = mean_value)) + 
-      geom_density_ridges(
-        quantile_lines = TRUE, quantile_fun = mean
-      ) + 
-      scale_fill_brewer(type = "div") +
+      ggplot(aes(value, fill = mean_value)) + 
+      plot_geoms_question() + 
+      scale_x_continuous(breaks = 1:5, labels = 1:5) +      scale_fill_brewer(type = "div") +
       scale_fill_gradient(low = "red", high = "blue") +
       labs(
         title = paste0("התפלגות וממוצע מדד לפי עיר", "\n", input$question),
@@ -147,10 +205,9 @@ server <- function(input, output) {
         mean_value = mean(value)
       ) |> 
       mutate(question = fct_reorder(question, value, .fun = mean)) |>
-      ggplot(aes(value, question, fill = mean_value)) + 
-      geom_density_ridges(
-        quantile_lines = TRUE, quantile_fun = mean
-      ) + 
+      ggplot(aes(value, fill = mean_value)) + 
+      plot_geoms_city() +
+      scale_x_continuous(breaks = 1:5, labels = 1:5) +
       scale_fill_gradient(low = "red", high = "blue", breaks = 1:5) +
       labs(
         title = paste("התפלגות וממוצע מדד לפי שאלה,", input$city),
